@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, Response
 import requests
 import json
 
@@ -19,21 +19,18 @@ def tradealert():
         response = requests.get(base_url, params=params, timeout=10)
         response.raise_for_status()
 
-        # Clean and fix escaped JSON
         text = response.text.strip()
+
+        # Fix double-encoded JSON
         if text.startswith('"') and text.endswith('"'):
-            text = text[1:-1]  # remove outer quotes
-        text = text.replace('\\"', '"').replace('\\\\', '\\')
+            text = text[1:-1]
+        text = text.encode('utf-8').decode('unicode_escape')
 
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError:
-            data = {"raw_text": text}
-
-        return jsonify(data)
+        # Return valid JSON response
+        return Response(text, content_type="application/json")
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return Response(json.dumps({"error": str(e)}), content_type="application/json", status=500)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
