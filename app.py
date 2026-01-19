@@ -3,25 +3,31 @@ import requests
 
 app = Flask(__name__)
 
-@app.route("/tradealert")
+@app.route('/tradealert', methods=['GET'])
 def tradealert():
+    base_url = "https://quant.trade-alert.com/"
     params = {
         "cmd": request.args.get("cmd", "top"),
+        "apikey": "c3Ur9P4izmE9Ig",
         "output": request.args.get("output", "json"),
         "symbol": request.args.get("symbol"),
-        "where": request.args.get("where"),
-        "apikey": "c3Ur9P4izmE9Ig"
+        "where": request.args.get("where")
     }
 
     try:
-        r = requests.get("https://quant.trade-alert.com", params=params, timeout=10)
+        response = requests.get(base_url, params=params, timeout=10)
+        response.raise_for_status()
+
+        # Try to safely parse JSON (if valid), else return as text
         try:
-            return jsonify(r.json())
+            data = response.json()
         except ValueError:
-            return {"error": "Response not valid JSON", "text": r.text}, r.status_code
-    except Exception as e:
-        return {"error": str(e)}, 500
+            data = {"raw_response": response.text}
 
+        return jsonify(data)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)
